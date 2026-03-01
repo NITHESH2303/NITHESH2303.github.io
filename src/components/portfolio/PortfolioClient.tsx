@@ -166,7 +166,7 @@ const projects: Project[] = [
     thumbTheme: "open",
   },
   {
-    title: "AI Powered Academic Guidance",
+    title: "RAG-based Academic Guidance Assistant",
     category: "AI & ML",
     impact: "Role-based assistant that gives contextual hints using RAG workflows.",
     tags: ["TypeScript", "FastAPI", "LangChain", "OpenAI"],
@@ -438,7 +438,7 @@ function TerminalCard() {
   const lines = [
     "name: Nithesh Kanna",
     "role: Member Technical Staff @ Zoho",
-    "focus: backend, integrations, applied-ai",
+    "focus: backend, integrations, ML systems",
     "education: IIT Madras, BIT",
     "status: open to impactful engineering",
   ];
@@ -897,7 +897,7 @@ export default function PortfolioClient() {
               Building enterprise SaaS workflows at Zoho with strong backend reliability and integration depth.
             </p>
             <p className="hero-summary">
-              Working across RAG systems, computer vision pipelines, and practical AI applications.
+              Engineering data science and ML systems end-to-end: RAG retrieval pipelines, model evaluation, and production APIs.
             </p>
           </motion.div>
           <motion.div variants={leftItemSpring}>
@@ -997,7 +997,7 @@ export default function PortfolioClient() {
               production data integrity.
             </p>
             <p>
-              Alongside backend engineering, I actively build applied AI systems including OCR-driven computer vision
+              Alongside backend engineering, I actively build applied ML systems including OCR-driven computer vision
               and RAG-powered assistants. I enjoy creating tools that solve practical problems and help teams move
               faster with confidence.
             </p>
