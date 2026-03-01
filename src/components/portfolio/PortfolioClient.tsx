@@ -2,8 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import {
+  AnimatePresence,
+  motion,
+  useInView,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  type Variants,
+} from "framer-motion";
 import SectionHeading from "@/components/common/SectionHeading";
 
 type ExperienceEntry = {
@@ -38,11 +46,11 @@ type ChatMessage = {
 };
 
 const navItems = [
-  { href: "#about", label: "About" },
-  { href: "#skills", label: "Skills" },
-  { href: "#experience", label: "Experience" },
-  { href: "#projects", label: "Projects" },
-  { href: "#contact", label: "Contact" },
+  { href: "#about", label: "About", section: "about" as const },
+  { href: "#skills", label: "Skills", section: "skills" as const },
+  { href: "#experience", label: "Experience", section: "experience" as const },
+  { href: "#projects", label: "Projects", section: "projects" as const },
+  { href: "#contact", label: "Contact", section: "contact" as const },
 ];
 
 const heroTaglines = ["Backend Engineer", "AI/ML Engineer", "Problem Solver"];
@@ -234,6 +242,8 @@ const defaultChatMessages: ChatMessage[] = [
   },
 ];
 
+type ActiveSection = "hero" | "about" | "skills" | "experience" | "projects" | "contact";
+
 const leftColumnStagger: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -248,6 +258,41 @@ const leftItemSpring: Variants = {
     y: 0,
     opacity: 1,
     transition: { type: "spring", stiffness: 60, damping: 18 },
+  },
+};
+
+const aboutCardsContainer: Variants = {
+  hidden: { opacity: 1 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.2 },
+  },
+};
+
+const aboutCardItem: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 60, damping: 16 },
+  },
+};
+
+const skillsCardsContainer: Variants = {
+  hidden: { opacity: 1 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1, delayChildren: 0.1 },
+  },
+};
+
+const skillsCardItem: Variants = {
+  hidden: { opacity: 0, y: 24, scale: 0.97 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: "spring", stiffness: 55, damping: 15 },
   },
 };
 
@@ -273,40 +318,82 @@ function buildAssistantReply(input: string): string {
   return "Nithesh is a software developer focused on backend systems, enterprise integrations, and applied AI. Ask about projects, skills, or contact details.";
 }
 
-function SkillPill({ text }: { text: string }) {
-  return <span className="skill-pill">{text}</span>;
+function SkillPill({ text, interactive = false }: { text: string; interactive?: boolean }) {
+  return <span className={`skill-pill${interactive ? " skill-pill-interactive" : ""}`}>{text}</span>;
 }
 
 function StatChip({ text }: { text: string }) {
   return <div className="stat-chip">{text}</div>;
 }
 
-function CategoryCard({ title, items, delay }: { title: string; items: string[]; delay: number }) {
+function CategoryCard({
+  title,
+  items,
+}: {
+  title: string;
+  items: string[];
+}) {
   return (
-    <article className="category-card reveal" style={{ "--delay": `${delay}ms` } as CSSProperties}>
+    <motion.article className="category-card" variants={skillsCardItem}>
       <h3>{title}</h3>
       <div className="pill-wrap">
         {items.map((item) => (
-          <SkillPill key={item} text={item} />
+          <SkillPill key={item} text={item} interactive />
         ))}
       </div>
-    </article>
+    </motion.article>
   );
 }
 
 function TimelineEntry({
   entry,
+  index,
   isOpen,
   onToggle,
+  timelineVisible,
+  shouldReduceMotion,
 }: {
   entry: ExperienceEntry;
+  index: number;
   isOpen: boolean;
   onToggle: () => void;
+  timelineVisible: boolean;
+  shouldReduceMotion: boolean;
 }) {
+  const cardRef = useRef<HTMLElement | null>(null);
+  const cardInView = useInView(cardRef, { once: true, margin: "-40px" });
+  const cardVisible = shouldReduceMotion || cardInView;
+
   return (
-    <article className="timeline-entry reveal">
-      <div className="timeline-dot" aria-hidden="true" />
-      <div className="timeline-card">
+    <motion.article
+      ref={cardRef}
+      className="timeline-entry"
+      initial={shouldReduceMotion ? false : { opacity: 0, x: 40 }}
+      animate={cardVisible ? { opacity: 1, x: 0 } : { opacity: 0, x: 40 }}
+      transition={
+        shouldReduceMotion
+          ? { duration: 0 }
+          : { duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: index * 0.15 }
+      }
+    >
+      <motion.div
+        className="timeline-dot"
+        aria-hidden="true"
+        initial={shouldReduceMotion ? false : { scale: 0 }}
+        animate={shouldReduceMotion || timelineVisible ? { scale: 1 } : { scale: 0 }}
+        transition={
+          shouldReduceMotion
+            ? { duration: 0 }
+            : { type: "spring", stiffness: 200, damping: 12, delay: index * 0.3 + 0.4 }
+        }
+      />
+      <motion.div
+        className="timeline-card experience-card group border-l-2 border-transparent transition-colors duration-300 hover:border-teal-500"
+        whileHover={
+          shouldReduceMotion ? undefined : { backgroundColor: "rgba(13, 148, 136, 0.04)" }
+        }
+        transition={{ duration: 0.2 }}
+      >
         <p className="entry-role">{entry.role}</p>
         <h3>{entry.company}</h3>
         <p className="entry-meta">
@@ -323,14 +410,30 @@ function TimelineEntry({
             ))}
           </ul>
         ) : null}
-      </div>
-    </article>
+      </motion.div>
+    </motion.article>
   );
 }
 
 function ProjectCard({ project, delay }: { project: Project; delay: number }) {
+  const [isHovering, setIsHovering] = useState(false);
+
   return (
-    <article className="project-card reveal" style={{ "--delay": `${delay}ms` } as CSSProperties}>
+    <motion.article
+      layout
+      className="project-card group reveal"
+      style={{ "--delay": `${delay}ms` } as CSSProperties}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      onHoverStart={() => setIsHovering(true)}
+      onHoverEnd={() => setIsHovering(false)}
+      whileHover={{
+        y: -8,
+        boxShadow: "0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(13,148,136,0.2)",
+      }}
+    >
       <div className={`project-thumb theme-${project.thumbTheme}`} aria-hidden="true">
         <p className="thumb-label">{project.category}</p>
         <div className="thumb-bar" />
@@ -353,7 +456,13 @@ function ProjectCard({ project, delay }: { project: Project; delay: number }) {
           Live
         </a>
       </div>
-    </article>
+      <motion.div
+        className="project-hover-bar"
+        initial={{ scaleX: 0, originX: 0 }}
+        animate={{ scaleX: isHovering ? 1 : 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+      />
+    </motion.article>
   );
 }
 
@@ -389,29 +498,119 @@ function TerminalCard() {
 }
 
 export default function PortfolioClient() {
-  const shouldReduceMotion = useReducedMotion();
-  const [isScrolled, setIsScrolled] = useState(false);
+  const shouldReduceMotion = useReducedMotion() ?? false;
+  const { scrollY } = useScroll();
+  const [navScrolled, setNavScrolled] = useState(false);
   const [showChatButton, setShowChatButton] = useState(false);
+  const [activeSection, setActiveSection] = useState<ActiveSection>("hero");
   const [typed, setTyped] = useState("");
   const [taglineIndex, setTaglineIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [openExperienceIndex, setOpenExperienceIndex] = useState(0);
   const [activeFilter, setActiveFilter] = useState<"All" | Project["category"]>("All");
   const [activeCodeProject, setActiveCodeProject] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(defaultChatMessages);
 
+  const aboutRef = useRef<HTMLDivElement | null>(null);
+  const skillsRef = useRef<HTMLDivElement | null>(null);
+  const experienceRef = useRef<HTMLDivElement | null>(null);
+  const contactRef = useRef<HTMLDivElement | null>(null);
+  const footerRef = useRef<HTMLElement | null>(null);
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const aboutInView = useInView(aboutRef, { once: true, margin: "-80px" });
+  const skillsInView = useInView(skillsRef, { once: true, margin: "-60px" });
+  const experienceInView = useInView(experienceRef, { once: true, margin: "-60px" });
+  const contactInView = useInView(contactRef, { once: true, margin: "-60px" });
+  const footerInView = useInView(footerRef, { once: true, margin: "-20px" });
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    setNavScrolled(latest > 20);
+    setShowChatButton(latest > 420);
+  });
+
   useEffect(() => {
-    const onScroll = () => {
-      setIsScrolled(window.scrollY > 16);
-      setShowChatButton(window.scrollY > 420);
+    const frame = window.requestAnimationFrame(() => {
+      const latest = window.scrollY;
+      setNavScrolled(latest > 20);
+      setShowChatButton(latest > 420);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    const sectionMap: Record<string, ActiveSection> = {
+      home: "hero",
+      about: "about",
+      skills: "skills",
+      experience: "experience",
+      projects: "projects",
+      contact: "contact",
     };
 
-    onScroll();
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    const sections = Object.keys(sectionMap)
+      .map((id) => document.getElementById(id))
+      .filter((node): node is HTMLElement => Boolean(node));
+
+    if (!sections.length) {
+      return;
+    }
+
+    const ratios: Record<ActiveSection, number> = {
+      hero: 0,
+      about: 0,
+      skills: 0,
+      experience: 0,
+      projects: 0,
+      contact: 0,
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const key = sectionMap[entry.target.id];
+          if (!key) {
+            return;
+          }
+          ratios[key] = entry.isIntersecting ? entry.intersectionRatio : 0;
+        });
+
+        const ranked = (Object.keys(ratios) as ActiveSection[])
+          .map((key) => ({ key, ratio: ratios[key] }))
+          .sort((a, b) => b.ratio - a.ratio);
+
+        const top = ranked[0];
+        if (top && top.ratio > 0) {
+          setActiveSection(top.key);
+          return;
+        }
+
+        if (window.scrollY <= 120) {
+          setActiveSection("hero");
+        }
+      },
+      {
+        root: null,
+        rootMargin: "-25% 0px -45% 0px",
+        threshold: [0, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1],
+      }
+    );
+
+    sections.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -472,26 +671,104 @@ export default function PortfolioClient() {
     setChatOpen(true);
   };
 
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(activeCode.snippet);
+    setCopied(true);
+
+    if (copiedTimeoutRef.current) {
+      clearTimeout(copiedTimeoutRef.current);
+    }
+
+    copiedTimeoutRef.current = setTimeout(() => {
+      setCopied(false);
+    }, 2000);
+  };
+
   const activeCode = codeShowcaseProjects[activeCodeProject];
   const codeLines = activeCode.snippet.split("\n");
 
   return (
     <>
-      <header className={`top-nav ${isScrolled ? "is-scrolled" : ""}`}>
-        <Link href="#home" className="mono-logo" aria-label="Home">
-          {"{ NK }"}
-        </Link>
+      <motion.header
+        className="top-nav"
+        animate={
+          navScrolled
+            ? {
+                backgroundColor: "rgba(8, 13, 26, 0.75)",
+                backdropFilter: "blur(16px) saturate(180%)",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
+              }
+            : {
+                backgroundColor: "rgba(8, 13, 26, 0)",
+                backdropFilter: "blur(0px) saturate(100%)",
+                borderBottom: "1px solid rgba(255,255,255,0)",
+                boxShadow: "0 0 0 rgba(0,0,0,0)",
+              }
+        }
+        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.3, ease: "easeOut" }}
+      >
+        <div className="nav-logo-wrap">
+          <Link
+            href="#home"
+            className={`mono-logo nav-link-item ${activeSection === "hero" ? "is-active" : ""}`}
+            aria-label="Home"
+          >
+            {"{ NK }"}
+          </Link>
+          {shouldReduceMotion ? (
+            activeSection === "hero" ? <span className="nav-active-dot" aria-hidden="true" /> : null
+          ) : (
+            <AnimatePresence>
+              {activeSection === "hero" ? (
+                <motion.span
+                  key="logo-dot"
+                  className="nav-active-dot"
+                  aria-hidden="true"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                />
+              ) : null}
+            </AnimatePresence>
+          )}
+        </div>
         <nav>
           {navItems.map((item) => (
-            <a key={item.href} href={item.href}>
-              {item.label}
-            </a>
+            <div key={item.href} className="nav-link-wrap">
+              <a
+                href={item.href}
+                className={`nav-link-item ${activeSection === item.section ? "is-active" : ""}`}
+              >
+                {item.label}
+              </a>
+              {shouldReduceMotion ? (
+                activeSection === item.section ? (
+                  <span className="nav-active-dot" aria-hidden="true" />
+                ) : null
+              ) : (
+                <AnimatePresence>
+                  {activeSection === item.section ? (
+                    <motion.span
+                      key={`${item.section}-dot`}
+                      className="nav-active-dot"
+                      aria-hidden="true"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    />
+                  ) : null}
+                </AnimatePresence>
+              )}
+            </div>
           ))}
         </nav>
         <a href="#contact" className="cta-link">
           Get in Touch
         </a>
-      </header>
+      </motion.header>
 
       <section id="home" className="hero-section">
         <div className="hero-geometry" aria-hidden="true">
@@ -685,13 +962,21 @@ export default function PortfolioClient() {
       </section>
 
       <section id="about" className="content-section">
-        <SectionHeading
-          title="About"
-          accent="Me"
-          subtitle="Software engineer focused on practical, scalable, and dependable product systems."
-        />
-        <div className="about-grid">
-          <div className="about-copy reveal">
+        <motion.div ref={aboutRef}>
+          <SectionHeading
+            title="About"
+            accent="Me"
+            subtitle="Software engineer focused on practical, scalable, and dependable product systems."
+          />
+          <div className="about-grid">
+            <motion.div
+              className="about-copy"
+              initial={shouldReduceMotion ? false : { opacity: 0, x: -32 }}
+              animate={shouldReduceMotion || aboutInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -32 }}
+              transition={
+                shouldReduceMotion ? { duration: 0 } : { duration: 0.7, ease: [0.22, 1, 0.36, 1] }
+              }
+            >
             <p>
               I currently work on Zoho Payroll US, where I build and improve enterprise integrations used in real
               customer operations. My work spans high-trust backend systems, tax and reimbursement workflows, and
@@ -702,22 +987,38 @@ export default function PortfolioClient() {
               and RAG-powered assistants. I enjoy creating tools that solve practical problems and help teams move
               faster with confidence.
             </p>
+            </motion.div>
+            <motion.div
+              className="trait-grid"
+              variants={aboutCardsContainer}
+              initial={shouldReduceMotion ? false : "hidden"}
+              animate={shouldReduceMotion || aboutInView ? "show" : "hidden"}
+            >
+              {traitCards.map((trait) => (
+                <motion.article
+                  key={trait.label}
+                  className="trait-card border-t border-transparent hover:border-teal-500/40 transition-colors duration-300"
+                  variants={aboutCardItem}
+                  whileHover={
+                    shouldReduceMotion
+                      ? undefined
+                      : {
+                          y: -6,
+                          boxShadow:
+                            "0 8px 32px rgba(13, 148, 136, 0.18), 0 0 0 1px rgba(13,148,136,0.25)",
+                        }
+                  }
+                  transition={{ duration: 0.25 }}
+                >
+                  <span className="trait-icon" aria-hidden="true">
+                    {trait.icon}
+                  </span>
+                  <span className="trait-label">{trait.label}</span>
+                </motion.article>
+              ))}
+            </motion.div>
           </div>
-          <div className="trait-grid">
-            {traitCards.map((trait, index) => (
-              <article
-                key={trait.label}
-                className="trait-card reveal"
-                style={{ "--delay": `${index * 80}ms` } as CSSProperties}
-              >
-                <span className="trait-icon" aria-hidden="true">
-                  {trait.icon}
-                </span>
-                <span className="trait-label">{trait.label}</span>
-              </article>
-            ))}
-          </div>
-        </div>
+        </motion.div>
       </section>
 
       <section id="skills" className="content-section">
@@ -726,11 +1027,17 @@ export default function PortfolioClient() {
           accent="& Expertise"
           subtitle="Balanced across backend delivery, AI engineering, data systems, and execution quality."
         />
-        <div className="skills-grid">
-          {skills.map((skill, index) => (
-            <CategoryCard key={skill.title} title={skill.title} items={skill.items} delay={index * 80} />
+        <motion.div
+          ref={skillsRef}
+          className="skills-grid"
+          variants={skillsCardsContainer}
+          initial={shouldReduceMotion ? false : "hidden"}
+          animate={shouldReduceMotion || skillsInView ? "show" : "hidden"}
+        >
+          {skills.map((skill) => (
+            <CategoryCard key={skill.title} title={skill.title} items={skill.items} />
           ))}
-        </div>
+        </motion.div>
       </section>
 
       <section id="experience" className="content-section">
@@ -739,13 +1046,26 @@ export default function PortfolioClient() {
           accent="Journey"
           subtitle="Most recent experience first, with delivery details and impact highlights."
         />
-        <div className="timeline-wrap">
+        <div ref={experienceRef} className="timeline-wrap">
+          <motion.div
+            className="timeline-line"
+            initial={shouldReduceMotion ? false : { scaleY: 0, originY: 0 }}
+            animate={shouldReduceMotion || experienceInView ? { scaleY: 1 } : { scaleY: 0 }}
+            transition={
+              shouldReduceMotion
+                ? { duration: 0 }
+                : { duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.2 }
+            }
+          />
           {experiences.map((entry, index) => (
             <TimelineEntry
               key={`${entry.company}-${entry.role}`}
               entry={entry}
+              index={index}
               isOpen={openExperienceIndex === index}
               onToggle={() => setOpenExperienceIndex((current) => (current === index ? -1 : index))}
+              timelineVisible={experienceInView}
+              shouldReduceMotion={shouldReduceMotion}
             />
           ))}
         </div>
@@ -759,21 +1079,30 @@ export default function PortfolioClient() {
         />
         <div className="filter-tabs" role="tablist" aria-label="Project filters">
           {["All", "Backend", "AI & ML", "Computer Vision", "Open Source"].map((filter) => (
-            <button
+            <motion.button
               key={filter}
               type="button"
-              className={activeFilter === filter ? "active" : ""}
+              className={`filter-tab-btn ${activeFilter === filter ? "active" : ""}`}
               onClick={() => setActiveFilter(filter as "All" | Project["category"])}
+              whileHover={shouldReduceMotion ? undefined : { color: "#0d9488" }}
+              transition={{ duration: 0.15 }}
             >
+              {!shouldReduceMotion ? (
+                <AnimatePresence>
+                  {activeFilter === filter ? <motion.div layoutId="activeTab" className="active-tab-pill" /> : null}
+                </AnimatePresence>
+              ) : null}
               {filter}
-            </button>
+            </motion.button>
           ))}
         </div>
-        <div className="projects-grid">
-          {filteredProjects.map((project, index) => (
-            <ProjectCard key={project.title} project={project} delay={index * 70} />
-          ))}
-        </div>
+        <motion.div layout className="projects-grid">
+          <AnimatePresence mode="popLayout">
+            {filteredProjects.map((project, index) => (
+              <ProjectCard key={project.title} project={project} delay={index * 70} />
+            ))}
+          </AnimatePresence>
+        </motion.div>
       </section>
 
       <section className="content-section">
@@ -785,15 +1114,18 @@ export default function PortfolioClient() {
         <div className="code-showcase">
           <aside className="project-list">
             {codeShowcaseProjects.map((project, index) => (
-              <button
+              <motion.button
                 key={project.title}
                 type="button"
                 className={activeCodeProject === index ? "active" : ""}
                 onClick={() => setActiveCodeProject(index)}
+                initial={activeCodeProject === index ? { opacity: 0, x: -6 } : undefined}
+                animate={activeCodeProject === index ? { opacity: 1, x: 0 } : undefined}
+                transition={{ duration: 0.2 }}
               >
                 <strong>{project.title}</strong>
                 <span>{project.stack}</span>
-              </button>
+              </motion.button>
             ))}
           </aside>
 
@@ -807,22 +1139,54 @@ export default function PortfolioClient() {
                   ))}
                 </div>
               </div>
-              <button
+              <motion.button
                 type="button"
-                onClick={() => navigator.clipboard.writeText(activeCode.snippet)}
-                className="copy-btn"
+                onClick={handleCopy}
+                className={`copy-btn ${copied ? "copied" : ""}`}
+                animate={copied ? { borderColor: "#0d9488", color: "#0d9488" } : undefined}
+                transition={{ duration: 0.15 }}
               >
-                Copy
-              </button>
+                <AnimatePresence mode="wait" initial={false}>
+                  {copied ? (
+                    <motion.span
+                      key="copied"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      ✓ Copied!
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="copy"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      Copy
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
             </div>
-            <pre>
-              {codeLines.map((line, index) => (
-                <code key={`${line}-${index}`}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  {line}
-                </code>
-              ))}
-            </pre>
+            <AnimatePresence mode="wait">
+              <motion.pre
+                key={activeCodeProject}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={shouldReduceMotion ? undefined : { opacity: 0, y: -4 }}
+                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.25, ease: "easeOut" }}
+              >
+                {codeLines.map((line, index) => (
+                  <code key={`${line}-${index}`}>
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    {line}
+                  </code>
+                ))}
+              </motion.pre>
+            </AnimatePresence>
           </article>
         </div>
       </section>
@@ -833,8 +1197,15 @@ export default function PortfolioClient() {
           accent="Connect"
           subtitle="Open to collaboration, product engineering discussions, and challenging builds."
         />
-        <div className="contact-wrap">
-          <aside className="contact-info reveal">
+        <motion.div ref={contactRef} className="contact-wrap">
+          <motion.aside
+            className="contact-info"
+            initial={shouldReduceMotion ? false : { opacity: 0, x: -24 }}
+            animate={shouldReduceMotion || contactInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -24 }}
+            transition={
+              shouldReduceMotion ? { duration: 0 } : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
+            }
+          >
             <p>
               <strong>Email:</strong> nitheshkanna23@gmail.com
             </p>
@@ -854,17 +1225,45 @@ export default function PortfolioClient() {
               </a>
             </p>
             <div className="social-row">
-              <a href="https://github.com/NITHESH2303" target="_blank" rel="noreferrer">
+              <motion.a
+                href="https://github.com/NITHESH2303"
+                target="_blank"
+                rel="noreferrer"
+                whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+                transition={{ duration: 0.15 }}
+              >
                 GitHub
-              </a>
-              <a href="https://www.linkedin.com/in/nitheshkanna" target="_blank" rel="noreferrer">
+              </motion.a>
+              <motion.a
+                href="https://www.linkedin.com/in/nitheshkanna"
+                target="_blank"
+                rel="noreferrer"
+                whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+                transition={{ duration: 0.15 }}
+              >
                 LinkedIn
-              </a>
-              <a href="mailto:nitheshkanna23@gmail.com">Email</a>
+              </motion.a>
+              <motion.a
+                href="mailto:nitheshkanna23@gmail.com"
+                whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+                transition={{ duration: 0.15 }}
+              >
+                Email
+              </motion.a>
             </div>
-          </aside>
+          </motion.aside>
 
-          <form className="contact-form reveal" onSubmit={(event) => event.preventDefault()}>
+          <motion.form
+            className="contact-form"
+            onSubmit={(event) => event.preventDefault()}
+            initial={shouldReduceMotion ? false : { opacity: 0, x: 24 }}
+            animate={shouldReduceMotion || contactInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 24 }}
+            transition={
+              shouldReduceMotion
+                ? { duration: 0 }
+                : { duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }
+            }
+          >
             <label>
               Name
               <input type="text" name="name" placeholder="Your name" />
@@ -881,38 +1280,97 @@ export default function PortfolioClient() {
               Message
               <textarea name="message" rows={5} placeholder="Tell me about your idea..." />
             </label>
-            <button type="submit">Send Message</button>
-          </form>
-        </div>
+            <motion.button
+              type="submit"
+              whileHover={
+                shouldReduceMotion
+                  ? undefined
+                  : { scale: 1.02, boxShadow: "0 0 20px rgba(13,148,136,0.35)" }
+              }
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+              transition={{ duration: 0.2 }}
+            >
+              Send Message
+            </motion.button>
+          </motion.form>
+        </motion.div>
       </section>
 
-      <footer className="site-footer">
+      <motion.footer
+        ref={footerRef}
+        className="site-footer"
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+        animate={shouldReduceMotion || footerInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.6, ease: "easeOut" }}
+      >
         <div className="footer-left">
           <p className="mono-logo">{"{ NK }"}</p>
           <div className="footer-nav">
             {navItems.map((item) => (
-              <a key={item.href} href={item.href}>
+              <motion.a
+                key={item.href}
+                href={item.href}
+                whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+                transition={{ duration: 0.15 }}
+              >
                 {item.label}
-              </a>
+              </motion.a>
             ))}
           </div>
         </div>
         <div className="footer-right">
           <p>© 2026 Nithesh Kanna</p>
           <div>
-            <a href="https://github.com/NITHESH2303" target="_blank" rel="noreferrer">
+            <motion.a
+              href="https://github.com/NITHESH2303"
+              target="_blank"
+              rel="noreferrer"
+              whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+              transition={{ duration: 0.15 }}
+            >
               GitHub
-            </a>
-            <a href="https://www.linkedin.com/in/nitheshkanna" target="_blank" rel="noreferrer">
+            </motion.a>
+            <motion.a
+              href="https://www.linkedin.com/in/nitheshkanna"
+              target="_blank"
+              rel="noreferrer"
+              whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+              transition={{ duration: 0.15 }}
+            >
               LinkedIn
-            </a>
-            <a href="mailto:nitheshkanna23@gmail.com">Email</a>
+            </motion.a>
+            <motion.a
+              href="mailto:nitheshkanna23@gmail.com"
+              whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+              transition={{ duration: 0.15 }}
+            >
+              Email
+            </motion.a>
           </div>
           <p className="status-dot">
-            <span /> SYSTEM ONLINE
+            <span className="status-pulse-wrap">
+              <motion.span
+                className="status-pulse-ring status-pulse-ring-inner"
+                animate={shouldReduceMotion ? undefined : { scale: [1, 2.2, 1], opacity: [0.7, 0, 0.7] }}
+                transition={
+                  shouldReduceMotion ? { duration: 0 } : { duration: 2.2, repeat: Infinity, ease: "easeOut" }
+                }
+              />
+              <motion.span
+                className="status-pulse-ring status-pulse-ring-outer"
+                animate={shouldReduceMotion ? undefined : { scale: [1, 3, 1], opacity: [0.4, 0, 0.4] }}
+                transition={
+                  shouldReduceMotion
+                    ? { duration: 0 }
+                    : { duration: 2.2, repeat: Infinity, ease: "easeOut", delay: 0.4 }
+                }
+              />
+              <span className="status-core-dot" />
+            </span>{" "}
+            SYSTEM ONLINE
           </p>
         </div>
-      </footer>
+      </motion.footer>
 
       {showChatButton ? (
         <button type="button" className="chat-float" onClick={openChat}>

@@ -161,7 +161,14 @@ div.cursor-glow {
   gap: 0.3rem;
 }
 
-.top-nav nav a {
+.nav-logo-wrap,
+.nav-link-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.top-nav nav a,
+.nav-link-item {
   border-radius: 999px;
   padding: 0.4rem 0.7rem;
   font-size: 0.86rem;
@@ -170,10 +177,26 @@ div.cursor-glow {
   transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
 }
 
-.top-nav nav a:hover {
+.top-nav nav a:hover,
+.nav-link-item:hover {
   color: #d7fffa;
   background: rgba(45, 212, 191, 0.16);
   border-color: rgba(45, 212, 191, 0.32);
+}
+
+.nav-link-item.is-active {
+  color: #0d9488;
+}
+
+.nav-active-dot {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background-color: #0d9488;
 }
 
 .cta-link {
@@ -334,6 +357,19 @@ div.cursor-glow {
   font-size: 0.77rem;
   background: rgba(14, 20, 32, 0.88);
   color: #d6f7f1;
+}
+
+.skill-pill-interactive {
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+.skill-pill-interactive:hover {
+  box-shadow:
+    0 0 10px rgba(13, 148, 136, 0.35),
+    0 0 0 1px rgba(13, 148, 136, 0.4);
+  color: #0d9488;
+  transform: scale(1.05);
 }
 
 .hero-buttons {
@@ -706,8 +742,7 @@ div.cursor-glow {
   padding-left: 0.6rem;
 }
 
-.timeline-wrap::before {
-  content: "";
+.timeline-line {
   position: absolute;
   left: 0.5rem;
   top: 0;
@@ -715,11 +750,14 @@ div.cursor-glow {
   width: 3px;
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(15, 118, 110, 0.8), rgba(15, 118, 110, 0.2));
+  transform-origin: top;
+  z-index: 0;
 }
 
 .timeline-entry {
   position: relative;
   padding-left: 1.4rem;
+  z-index: 1;
 }
 
 .timeline-dot {
@@ -743,8 +781,13 @@ div.cursor-glow {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.11em;
-  color: var(--teal);
+  color: var(--muted);
   font-weight: 650;
+  transition: color 0.3s ease;
+}
+
+.experience-card:hover .entry-role {
+  color: #0d9488;
 }
 
 .entry-meta {
@@ -787,18 +830,35 @@ div.cursor-glow {
 }
 
 .filter-tabs button {
+  position: relative;
+  overflow: hidden;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--panel-strong);
   color: var(--muted);
   padding: 0.33rem 0.72rem;
   font-size: 0.82rem;
+  z-index: 1;
 }
 
 .filter-tabs button.active {
-  border-color: rgba(15, 118, 110, 0.38);
-  color: var(--teal-strong);
-  background: rgba(15, 118, 110, 0.12);
+  border-color: rgba(13, 148, 136, 0.35);
+  color: #0d9488;
+  font-weight: 500;
+}
+
+.filter-tab-btn {
+  position: relative;
+  isolation: isolate;
+}
+
+.active-tab-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background-color: rgba(13, 148, 136, 0.15);
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  z-index: -1;
 }
 
 .projects-grid {
@@ -809,6 +869,8 @@ div.cursor-glow {
 }
 
 .project-card {
+  position: relative;
+  overflow: hidden;
   padding: 0.82rem;
   transition: transform 220ms ease, box-shadow 220ms ease;
 }
@@ -818,12 +880,27 @@ div.cursor-glow {
   box-shadow: 0 16px 40px rgba(15, 118, 110, 0.26);
 }
 
+.project-hover-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background-color: #0d9488;
+  border-radius: 0 0 8px 8px;
+}
+
 .project-thumb {
   position: relative;
   border-radius: 0.7rem;
   border: 1px solid rgba(15, 118, 110, 0.25);
   padding: 0.65rem;
   overflow: hidden;
+  transition: filter 0.35s ease;
+}
+
+.project-card.group:hover .project-thumb {
+  filter: brightness(1.15) saturate(1.1);
 }
 
 .project-thumb::after {
@@ -917,9 +994,11 @@ div.cursor-glow {
   text-align: left;
   border-radius: 0.7rem;
   border: 1px solid transparent;
+  border-left: 2px solid transparent;
   background: rgba(12, 18, 31, 0.86);
   padding: 0.63rem;
   color: #fff;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
 .project-list button strong {
@@ -935,12 +1014,23 @@ div.cursor-glow {
 }
 
 .project-list button.active {
-  border-color: rgba(45, 212, 191, 0.34);
-  background: rgba(45, 212, 191, 0.14);
+  border-left: 2px solid #0d9488;
+  background: rgba(13, 148, 136, 0.08);
+}
+
+.project-list button.active strong {
+  color: #0d9488;
+}
+
+.project-list button:not(.active):hover {
+  border-left: 2px solid rgba(13, 148, 136, 0.3);
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .code-viewer {
   padding: 0.82rem;
+  border-top: 1px solid rgba(13, 148, 136, 0.25);
+  box-shadow: 0 -1px 0 rgba(13, 148, 136, 0.3), inset 0 1px 0 rgba(13, 148, 136, 0.1);
 }
 
 .code-header {
@@ -956,6 +1046,12 @@ div.cursor-glow {
   padding: 0.36rem 0.72rem;
   background: rgba(15, 118, 110, 0.1);
   color: #d7fffa;
+  min-width: 88px;
+}
+
+.copy-btn.copied {
+  border-color: #0d9488;
+  color: #0d9488;
 }
 
 .code-viewer pre {
@@ -977,7 +1073,7 @@ div.cursor-glow {
 }
 
 .code-viewer pre code span {
-  color: #75b99d;
+  color: rgba(13, 148, 136, 0.4);
 }
 
 .contact-wrap {
@@ -1025,6 +1121,11 @@ div.cursor-glow {
   gap: 0.38rem;
   font-size: 0.89rem;
   color: var(--muted);
+  transition: color 0.25s ease;
+}
+
+.contact-form label:focus-within {
+  color: #0d9488;
 }
 
 .contact-form input,
@@ -1037,6 +1138,16 @@ div.cursor-glow {
   color: var(--text);
   padding: 0.56rem 0.62rem;
   font: inherit;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.contact-form input:focus,
+.contact-form textarea:focus {
+  outline: none;
+  border-color: #0d9488;
+  box-shadow:
+    0 0 0 3px rgba(13, 148, 136, 0.15),
+    0 0 12px rgba(13, 148, 136, 0.1);
 }
 
 .contact-form textarea {
@@ -1090,6 +1201,41 @@ div.cursor-glow {
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
+}
+
+.status-pulse-wrap {
+  position: relative;
+  width: 0.5rem;
+  height: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.status-core-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: #34d399;
+  position: relative;
+  z-index: 3;
+}
+
+.status-pulse-ring {
+  position: absolute;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.6);
+}
+
+.status-pulse-ring-inner {
+  z-index: 2;
+}
+
+.status-pulse-ring-outer {
+  z-index: 1;
 }
 
 .chat-float {
