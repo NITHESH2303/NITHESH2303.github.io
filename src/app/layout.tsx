@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Fraunces } from "next/font/google";
 import "./globals.css";
 import CursorGlow from "@/components/CursorGlow";
+import MLBackgroundCanvas from "@/components/MLBackgroundCanvas";
+import LayoutClient from "@/components/LayoutClient";
+import { BackgroundViewProvider } from "@/contexts/BackgroundViewContext";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -24,15 +27,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`bg-[#060d1a] ${fraunces.variable}`}>
-        <div className="app-root bg-[#060d1a]">
-          <CursorGlow />
-          <div className="global-orbs pointer-events-none" aria-hidden="true">
-            <span className="orb orb-teal" />
-            <span className="orb orb-indigo" />
-            <span className="orb orb-blue" />
+        <BackgroundViewProvider>
+          <div className="app-root bg-[#060d1a]">
+            <CursorGlow />
+            <MLBackgroundCanvas />
+            <div className="global-orbs pointer-events-none" aria-hidden="true">
+              <span className="orb orb-primary" />
+              <span className="orb orb-indigo" />
+              <span className="orb orb-blue" />
+            </div>
+            <LayoutClient>{children}</LayoutClient>
           </div>
-          <div className="app-content">{children}</div>
-        </div>
+        </BackgroundViewProvider>
       </body>
     </html>
   );
