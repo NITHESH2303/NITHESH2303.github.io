@@ -13,6 +13,7 @@ import {
   type Variants,
 } from "framer-motion";
 import SectionHeading from "@/components/common/SectionHeading";
+import VSCodeStyleCodeView, { getLanguageFromPathOrLang } from "@/components/VSCodeStyleCodeView";
 
 type ExperienceEntry = {
   company: string;
@@ -37,7 +38,8 @@ type CodeProject = {
   title: string;
   stack: string;
   tags: string[];
-  snippet: string;
+  /** Load file from GitHub raw URL (https://raw.githubusercontent.com/owner/repo/branch/path/to/file) */
+  githubRawUrl: string;
 };
 
 type ChatMessage = {
@@ -94,7 +96,7 @@ const skills = [
 const experiences: ExperienceEntry[] = [
   {
     company: "Zoho Corporation",
-    location: "Karanampettai, TN",
+    location: "Coimbatore, TN",
     role: "Member Technical Staff",
     duration: "May 2024 - Present",
     description:
@@ -108,7 +110,7 @@ const experiences: ExperienceEntry[] = [
   },
   {
     company: "Zoho Corporation",
-    location: "Karanampettai, TN",
+    location: "Coimbatore, TN",
     role: "Technical Trainee",
     duration: "Dec 2023 - Apr 2024",
     description:
@@ -180,53 +182,19 @@ const codeShowcaseProjects: CodeProject[] = [
     title: "RAG Chatbot Pipeline",
     stack: "LangChain + OpenAI",
     tags: ["RAG", "Prompting", "Context Retrieval"],
-    snippet: `class GuidanceAgent:
-  def __init__(self, vector_store, llm):
-    self.vector_store = vector_store
-    self.llm = llm
-
-  def answer(self, user_query, role):
-    docs = self.vector_store.similarity_search(user_query, k=4)
-    context = "\\n".join([d.page_content for d in docs])
-    prompt = f"Role={role}\\nContext={context}\\nQ={user_query}"
-    return self.llm.invoke(prompt)`,
+    githubRawUrl: "https://raw.githubusercontent.com/NITHESH2303/soft-engg-project-jan-2025-se-Jan-13/main/backend/platform/ai_platform/agents/framework_agentic.py",
   },
   {
     title: "CV Number Plate Tracker",
     stack: "YOLO + EasyOCR",
     tags: ["Computer Vision", "Detection", "OCR"],
-    snippet: `def extract_plate_text(frame, detector, ocr):
-  detections = detector.detect(frame)
-  approved = []
-  for box in detections:
-    crop = frame[box.y1:box.y2, box.x1:box.x2]
-    text = ocr.readtext(crop)
-    if text:
-      approved.append(normalize(text[0]))
-  return approved`,
+    githubRawUrl: "https://raw.githubusercontent.com/NITHESH2303/NumberPlateDetection/main/scripts/deploy.py",
   },
   {
-    title: "Payroll Integration Service",
-    stack: "Java + APIs",
-    tags: ["Enterprise", "Integrations", "Validation"],
-    snippet: `public MigrationResult migrateOrg(long payrollOrgId) {
-  ChqOrg chqOrg = chqClient.ensureOrg(payrollOrgId);
-  taxService.syncStateConfig(payrollOrgId, chqOrg.getId());
-  integrityValidator.run(payrollOrgId);
-  return MigrationResult.success(chqOrg.getId());
-}`,
-  },
-  {
-    title: "Blog Discovery API",
-    stack: "Flask + SQLite",
-    tags: ["Backend", "Feeds", "Search"],
-    snippet: `@app.get("/explore")
-def explore_posts():
-  query = request.args.get("q", "")
-  posts = Post.query.filter(Post.body.ilike(f"%{query}%")) \\
-      .order_by(Post.created_at.desc()) \\
-      .limit(30)
-  return jsonify([post.to_dict() for post in posts])`,
+    title: "Celery Tasks",
+    stack: "Flask + Celery",
+    tags: ["Backend", "Celery", "Tasks"],
+    githubRawUrl: "https://raw.githubusercontent.com/NITHESH2303/InfluencerSponsorship/main/services/tasks.py",
   },
 ];
 
@@ -388,9 +356,9 @@ function TimelineEntry({
         }
       />
       <motion.div
-        className="timeline-card experience-card group border-l-2 border-transparent transition-colors duration-300 hover:border-teal-500"
+        className="timeline-card experience-card group border-l-2 border-transparent transition-colors duration-300 hover:border-indigo-500"
         whileHover={
-          shouldReduceMotion ? undefined : { backgroundColor: "rgba(13, 148, 136, 0.04)" }
+          shouldReduceMotion ? undefined : { backgroundColor: "rgba(99, 102, 241, 0.06)" }
         }
         transition={{ duration: 0.2 }}
       >
@@ -431,7 +399,7 @@ function ProjectCard({ project, delay }: { project: Project; delay: number }) {
       onHoverEnd={() => setIsHovering(false)}
       whileHover={{
         y: -8,
-        boxShadow: "0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(13,148,136,0.2)",
+        boxShadow: "0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(99,102,241,0.2)",
       }}
     >
       <div className={`project-thumb theme-${project.thumbTheme}`} aria-hidden="true">
@@ -483,11 +451,18 @@ function TerminalCard() {
         <span />
       </div>
       <div className="terminal-body">
-        {lines.map((line, index) => (
-          <p key={line} style={{ "--line-delay": `${index * 150}ms` } as CSSProperties}>
-            {line}
-          </p>
-        ))}
+        {lines.map((line, index) => {
+          const separator = line.indexOf(":");
+          const key = separator >= 0 ? line.slice(0, separator + 1) : line;
+          const value = separator >= 0 ? line.slice(separator + 1) : "";
+
+          return (
+            <p key={line} style={{ "--line-delay": `${index * 150}ms` } as CSSProperties}>
+              <span className="terminal-key">{key}</span>
+              {value ? <span className="terminal-value">{value}</span> : null}
+            </p>
+          );
+        })}
         <div className="terminal-cursor-line">
           <span className="terminal-prompt">❯</span>
           <span className="cursor cursor-glow">|</span>
@@ -510,6 +485,8 @@ export default function PortfolioClient() {
   const [activeFilter, setActiveFilter] = useState<"All" | Project["category"]>("All");
   const [activeCodeProject, setActiveCodeProject] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [codeLoadState, setCodeLoadState] = useState<"idle" | "loading" | "error">("idle");
+  const [fetchedCodeCache, setFetchedCodeCache] = useState<Record<string, string>>({});
 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
@@ -527,6 +504,35 @@ export default function PortfolioClient() {
   const experienceInView = useInView(experienceRef, { once: true, margin: "-60px" });
   const contactInView = useInView(contactRef, { once: true, margin: "-60px" });
   const footerInView = useInView(footerRef, { once: true, margin: "-20px" });
+
+  useEffect(() => {
+    const project = codeShowcaseProjects[activeCodeProject];
+    const url = project?.githubRawUrl;
+    if (!url) return;
+    if (fetchedCodeCache[url] !== undefined) return;
+    let cancelled = false;
+    queueMicrotask(() => setCodeLoadState("loading"));
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error("Fetch failed");
+        return res.text();
+      })
+      .then((text) => {
+        if (cancelled) return;
+        const maxLines = 500;
+        const lines = text.split("\n");
+        const trimmed =
+          lines.length > maxLines ? lines.slice(0, maxLines).join("\n") + "\n\n// … truncated" : text;
+        setFetchedCodeCache((prev) => ({ ...prev, [url]: trimmed }));
+        setCodeLoadState("idle");
+      })
+      .catch(() => {
+        if (!cancelled) setCodeLoadState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCodeProject, fetchedCodeCache]);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     setNavScrolled(latest > 20);
@@ -672,7 +678,7 @@ export default function PortfolioClient() {
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(activeCode.snippet);
+    await navigator.clipboard.writeText(displayCode);
     setCopied(true);
 
     if (copiedTimeoutRef.current) {
@@ -685,7 +691,15 @@ export default function PortfolioClient() {
   };
 
   const activeCode = codeShowcaseProjects[activeCodeProject];
-  const codeLines = activeCode.snippet.split("\n");
+  const rawUrl = activeCode.githubRawUrl;
+  const cachedCode = rawUrl ? fetchedCodeCache[rawUrl] : undefined;
+  const displayCode =
+    codeLoadState === "loading"
+      ? "Loading from GitHub…"
+      : codeLoadState === "error" || !cachedCode
+        ? "// Failed to load. Check the link or try again."
+        : cachedCode;
+  const codeLanguage = getLanguageFromPathOrLang(activeCode.githubRawUrl);
 
   return (
     <>
@@ -925,7 +939,7 @@ export default function PortfolioClient() {
             whileHover={
               shouldReduceMotion
                 ? undefined
-                : { boxShadow: "0 0 0 1.5px #0d9488, 0 0 32px #0d948840" }
+                : { boxShadow: "0 0 0 1.5px #6366f1, 0 0 32px #6366f140" }
             }
             transition={{ duration: 0.35 }}
           >
@@ -997,7 +1011,7 @@ export default function PortfolioClient() {
               {traitCards.map((trait) => (
                 <motion.article
                   key={trait.label}
-                  className="trait-card border-t border-transparent hover:border-teal-500/40 transition-colors duration-300"
+                  className="trait-card border-t border-transparent hover:border-indigo-500/40 transition-colors duration-300"
                   variants={aboutCardItem}
                   whileHover={
                     shouldReduceMotion
@@ -1005,7 +1019,7 @@ export default function PortfolioClient() {
                       : {
                           y: -6,
                           boxShadow:
-                            "0 8px 32px rgba(13, 148, 136, 0.18), 0 0 0 1px rgba(13,148,136,0.25)",
+                            "0 8px 32px rgba(99, 102, 241, 0.18), 0 0 0 1px rgba(99,102,241,0.25)",
                         }
                   }
                   transition={{ duration: 0.25 }}
@@ -1084,7 +1098,7 @@ export default function PortfolioClient() {
               type="button"
               className={`filter-tab-btn ${activeFilter === filter ? "active" : ""}`}
               onClick={() => setActiveFilter(filter as "All" | Project["category"])}
-              whileHover={shouldReduceMotion ? undefined : { color: "#0d9488" }}
+              whileHover={shouldReduceMotion ? undefined : { color: "#6366f1" }}
               transition={{ duration: 0.15 }}
             >
               {!shouldReduceMotion ? (
@@ -1139,11 +1153,25 @@ export default function PortfolioClient() {
                   ))}
                 </div>
               </div>
+              <div className="code-header-actions">
+                {activeCode.githubRawUrl && (
+                  <a
+                    href={activeCode.githubRawUrl.replace(
+                      /^https:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\/(.*)/,
+                      "https://github.com/$1/$2/blob/$3/$4"
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="view-on-github-link"
+                  >
+                    View on GitHub →
+                  </a>
+                )}
               <motion.button
                 type="button"
                 onClick={handleCopy}
                 className={`copy-btn ${copied ? "copied" : ""}`}
-                animate={copied ? { borderColor: "#0d9488", color: "#0d9488" } : undefined}
+                animate={copied ? { borderColor: "#6366f1", color: "#6366f1" } : undefined}
                 transition={{ duration: 0.15 }}
               >
                 <AnimatePresence mode="wait" initial={false}>
@@ -1170,23 +1198,26 @@ export default function PortfolioClient() {
                   )}
                 </AnimatePresence>
               </motion.button>
+              </div>
             </div>
-            <AnimatePresence mode="wait">
-              <motion.pre
-                key={activeCodeProject}
-                initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={shouldReduceMotion ? undefined : { opacity: 0, y: -4 }}
-                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.25, ease: "easeOut" }}
-              >
-                {codeLines.map((line, index) => (
-                  <code key={`${line}-${index}`}>
-                    <span>{String(index + 1).padStart(2, "0")}</span>
-                    {line}
-                  </code>
-                ))}
-              </motion.pre>
-            </AnimatePresence>
+            <div className="code-content-scroll code-content-scroll-monaco">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeCodeProject}
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={shouldReduceMotion ? undefined : { opacity: 0, y: -4 }}
+                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.25, ease: "easeOut" }}
+                  style={{ height: "100%" }}
+                >
+                  <VSCodeStyleCodeView
+                    value={displayCode}
+                    language={codeLanguage}
+                    className="code-showcase-monaco"
+                  />
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </article>
         </div>
       </section>
@@ -1229,7 +1260,7 @@ export default function PortfolioClient() {
                 href="https://github.com/NITHESH2303"
                 target="_blank"
                 rel="noreferrer"
-                whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+                whileHover={shouldReduceMotion ? undefined : { color: "#6366f1", x: 2 }}
                 transition={{ duration: 0.15 }}
               >
                 GitHub
@@ -1238,14 +1269,14 @@ export default function PortfolioClient() {
                 href="https://www.linkedin.com/in/nitheshkanna"
                 target="_blank"
                 rel="noreferrer"
-                whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+                whileHover={shouldReduceMotion ? undefined : { color: "#6366f1", x: 2 }}
                 transition={{ duration: 0.15 }}
               >
                 LinkedIn
               </motion.a>
               <motion.a
                 href="mailto:nitheshkanna23@gmail.com"
-                whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+                whileHover={shouldReduceMotion ? undefined : { color: "#6366f1", x: 2 }}
                 transition={{ duration: 0.15 }}
               >
                 Email
@@ -1285,7 +1316,7 @@ export default function PortfolioClient() {
               whileHover={
                 shouldReduceMotion
                   ? undefined
-                  : { scale: 1.02, boxShadow: "0 0 20px rgba(13,148,136,0.35)" }
+                  : { scale: 1.02, boxShadow: "0 0 20px rgba(59,130,246,0.35)" }
               }
               whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
               transition={{ duration: 0.2 }}
@@ -1310,7 +1341,7 @@ export default function PortfolioClient() {
               <motion.a
                 key={item.href}
                 href={item.href}
-                whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+                whileHover={shouldReduceMotion ? undefined : { color: "#6366f1", x: 2 }}
                 transition={{ duration: 0.15 }}
               >
                 {item.label}
@@ -1325,7 +1356,7 @@ export default function PortfolioClient() {
               href="https://github.com/NITHESH2303"
               target="_blank"
               rel="noreferrer"
-              whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+              whileHover={shouldReduceMotion ? undefined : { color: "#6366f1", x: 2 }}
               transition={{ duration: 0.15 }}
             >
               GitHub
@@ -1334,14 +1365,14 @@ export default function PortfolioClient() {
               href="https://www.linkedin.com/in/nitheshkanna"
               target="_blank"
               rel="noreferrer"
-              whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+              whileHover={shouldReduceMotion ? undefined : { color: "#6366f1", x: 2 }}
               transition={{ duration: 0.15 }}
             >
               LinkedIn
             </motion.a>
             <motion.a
               href="mailto:nitheshkanna23@gmail.com"
-              whileHover={shouldReduceMotion ? undefined : { color: "#0d9488", x: 2 }}
+              whileHover={shouldReduceMotion ? undefined : { color: "#6366f1", x: 2 }}
               transition={{ duration: 0.15 }}
             >
               Email
