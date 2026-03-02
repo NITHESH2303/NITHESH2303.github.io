@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import CursorGlow from "@/components/CursorGlow";
 import MLBackgroundCanvas from "@/components/MLBackgroundCanvas";
@@ -27,6 +28,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`bg-[#060d1a] ${fraunces.variable}`}>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-HJ4K5TPHDE"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-HJ4K5TPHDE');
+          `}
+        </Script>
         <BackgroundViewProvider>
           <div className="app-root bg-[#060d1a]">
             <CursorGlow />
