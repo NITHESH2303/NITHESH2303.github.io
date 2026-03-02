@@ -6,6 +6,7 @@ import CursorGlow from "@/components/CursorGlow";
 import MLBackgroundCanvas from "@/components/MLBackgroundCanvas";
 import LayoutClient from "@/components/LayoutClient";
 import { BackgroundViewProvider } from "@/contexts/BackgroundViewContext";
+import { Analytics } from "@vercel/analytics/next";
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
@@ -52,6 +53,7 @@ export default function RootLayout({
             <LayoutClient>{children}</LayoutClient>
           </div>
         </BackgroundViewProvider>
+        <Analytics />
       </body>
     </html>
   );
