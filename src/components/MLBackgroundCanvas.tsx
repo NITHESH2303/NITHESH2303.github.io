@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useBackgroundView } from "@/contexts/BackgroundViewContext";
 
-const HOVER_BOOST = 1.85;
+const HOVER_BOOST = 2;
 
 const CANVAS_ELEMENTS = {
   neuralNetwork: { enabled: true },
@@ -103,10 +103,10 @@ export default function MLBackgroundCanvas() {
 
     const drawDotGrid = (t: number, isHovered: boolean) => {
       if (!CANVAS_ELEMENTS.dotGrid.enabled) return;
-      const boost = isHovered ? HOVER_BOOST : 1;
+      const boost = isHovered ? HOVER_BOOST : 1.5;
       const step = 58;
       const majorEvery = 4;
-      const pulse = 0.75 + 0.25 * Math.sin(t * (isHovered ? 0.0024 : 0.0016));
+      const pulse = 0.75 + 0.25 * Math.sin(t * (isHovered ? 0.0040 : 0.0030));
       ctx.save();
       let yi = 0;
       for (let y = 0; y <= height; y += step, yi += 1) {
@@ -123,7 +123,7 @@ export default function MLBackgroundCanvas() {
       }
 
       ctx.lineWidth = 0.8;
-      ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(0.5, 0.016 * boost)})`;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(0.5, 0.04 * boost)})`;
       for (let x = 0; x <= width; x += step * majorEvery) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -142,7 +142,7 @@ export default function MLBackgroundCanvas() {
       const snapX = Math.round(probeX / step) * step;
       const snapY = Math.round(probeY / step) * step;
 
-      ctx.strokeStyle = `rgba(59, 130, 246, ${Math.min(0.5, 0.13 * boost)})`;
+      ctx.strokeStyle = `rgba(59, 130, 246, ${Math.min(0.5, 0.2 * boost)})`;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(snapX - 12, snapY);
@@ -190,11 +190,11 @@ export default function MLBackgroundCanvas() {
         current.forEach((a, i) => {
           next.forEach((b, j) => {
             const wave = 0.5 + 0.5 * Math.sin(t * waveSpeed + (i + j) * 0.65);
-            const alpha = (0.14 + pulseStrength * (isHovered ? 0.35 : 0.2) * wave) * boost;
+            const alpha = (0.1 + pulseStrength * (isHovered ? 0.35 : 0.2) * wave) * boost;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
-            ctx.strokeStyle = `rgba(59, 130, 246, ${Math.min(1, alpha).toFixed(4)})`;
+            ctx.strokeStyle = `rgba(59, 130, 246, ${Math.min(0.5, alpha).toFixed(4)})`;
             ctx.lineWidth = 1.2;
             ctx.stroke();
           });
@@ -202,7 +202,7 @@ export default function MLBackgroundCanvas() {
       }
 
       ctx.save();
-      ctx.strokeStyle = `rgba(99, 102, 241, ${Math.min(0.5, 0.26 * boost)})`;
+      ctx.strokeStyle = `rgba(99, 102, 241, ${Math.min(0.5, 0.25 * boost)})`;
       ctx.lineWidth = 1.2;
       layerPoints.forEach((points) => {
         points.forEach((point) => {
@@ -308,19 +308,22 @@ export default function MLBackgroundCanvas() {
 
     const drawCnnFeatureMap = (t: number, isHovered: boolean) => {
       if (!CANVAS_ELEMENTS.cnnFeatureMap.enabled) return;
-      const boost = isHovered ? HOVER_BOOST : 1;
+      const boost = isHovered ? HOVER_BOOST : 1.5;
       const baseW = 130;
       const baseH = 85;
       const offset = 12;
       const floatSpeed = isHovered ? 0.0012 : 0.00055;
       const floatY = Math.sin(t * floatSpeed) * (isHovered ? 10 : 5);
-      // Place CNN stack on the right at roughly 60% viewport width.
       const baseX = Math.min(width * 0.6, width - baseW - 120);
       const baseY = height * 0.56 + floatY;
-      const pulse = isHovered ? 0.5 + 0.5 * Math.sin(t * 0.002) : 1;
+      const pulse = isHovered ? 0.5 + 0.5 * Math.sin(t * 0.002) : 1.5;
       const scanProgress = (t * (isHovered ? 0.00038 : 0.00022)) % 1;
       ctx.save();
-      ctx.strokeStyle = `rgba(99, 102, 241, ${Math.min(0.5, 0.06 * boost * pulse)})`;
+      if (isHovered) {
+        ctx.shadowColor = "rgba(99, 102, 241, 0.6)";
+        ctx.shadowBlur = 14;
+      }
+      ctx.strokeStyle = `rgba(99, 102, 241, ${Math.min(0.5, 0.125 * boost * pulse)})`;
       ctx.lineWidth = 1.2;
       for (let i = 0; i < 4; i += 1) {
         ctx.strokeRect(baseX + i * offset, baseY - i * offset, baseW, baseH);
@@ -340,10 +343,14 @@ export default function MLBackgroundCanvas() {
         const projH = kernelH * Math.max(0.45, shrink);
         const projX = baseX + i * offset + scanProgress * (baseW - projW) * (1 - i * 0.08);
         const projY = baseY - i * offset + baseH * 0.5 - projH / 2;
-        ctx.strokeStyle = `rgba(99, 102, 241, ${Math.min(0.5, (0.18 - i * 0.03) * boost)})`;
+        ctx.strokeStyle = `rgba(99, 102, 241, ${Math.min(0.5, (0.25 - i * 0.03) * boost)})`;
         ctx.strokeRect(projX, projY, projW, projH);
       }
 
+      if (isHovered) {
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+      }
       drawLabel("CNN stack", baseX + baseW + 34, baseY - 2, "right", isHovered);
       ctx.restore();
     };
@@ -770,7 +777,7 @@ export default function MLBackgroundCanvas() {
         ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
         ctx.stroke();
         const next = dynamicCenters[(idx + 1) % dynamicCenters.length];
-        ctx.strokeStyle = `rgba(99, 102, 241, ${Math.min(0.5, 0.07 * boost)})`;
+        ctx.strokeStyle = `rgba(99, 102, 241, ${Math.min(0.5, 0.125 * boost)})`;
         ctx.beginPath();
         ctx.moveTo(c.x, c.y);
         ctx.lineTo(next.x, next.y);
