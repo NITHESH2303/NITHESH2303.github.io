@@ -477,6 +477,7 @@ export default function PortfolioClient() {
   const { scrollY } = useScroll();
   const [navScrolled, setNavScrolled] = useState(false);
   const [showChatButton, setShowChatButton] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<ActiveSection>("hero");
   const [typed, setTyped] = useState("");
   const [taglineIndex, setTaglineIndex] = useState(0);
@@ -491,6 +492,7 @@ export default function PortfolioClient() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(defaultChatMessages);
+  const [contactFormReady, setContactFormReady] = useState(false);
 
   const aboutRef = useRef<HTMLDivElement | null>(null);
   const skillsRef = useRef<HTMLDivElement | null>(null);
@@ -504,6 +506,11 @@ export default function PortfolioClient() {
   const experienceInView = useInView(experienceRef, { once: true, margin: "-60px" });
   const contactInView = useInView(contactRef, { once: true, margin: "-60px" });
   const footerInView = useInView(footerRef, { once: true, margin: "-20px" });
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setContactFormReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   useEffect(() => {
     const project = codeShowcaseProjects[activeCodeProject];
@@ -548,6 +555,39 @@ export default function PortfolioClient() {
 
     return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 768) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) {
+      return;
+    }
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     const sectionMap: Record<string, ActiveSection> = {
@@ -748,7 +788,7 @@ export default function PortfolioClient() {
             </AnimatePresence>
           )}
         </div>
-        <nav>
+        <nav className="desktop-nav">
           {navItems.map((item) => (
             <div key={item.href} className="nav-link-wrap">
               <a
@@ -779,10 +819,70 @@ export default function PortfolioClient() {
             </div>
           ))}
         </nav>
-        <a href="#contact" className="cta-link">
+        <a href="#contact" className="cta-link desktop-cta">
           Get in Touch
         </a>
+        <button
+          type="button"
+          className="mobile-menu-toggle"
+          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-nav-drawer"
+          onClick={() => setMobileMenuOpen((value) => !value)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
       </motion.header>
+
+      <AnimatePresence>
+        {mobileMenuOpen ? (
+          <motion.div
+            className="mobile-menu-overlay"
+            initial={shouldReduceMotion ? undefined : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2 }}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <motion.aside
+              id="mobile-nav-drawer"
+              className="mobile-menu-drawer"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Mobile navigation menu"
+              initial={shouldReduceMotion ? undefined : { x: "100%" }}
+              animate={{ x: 0 }}
+              exit={shouldReduceMotion ? undefined : { x: "100%" }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mobile-menu-head">
+                <p className="mono-logo">{"{ NK }"}</p>
+                <button type="button" onClick={() => setMobileMenuOpen(false)}>
+                  Close
+                </button>
+              </div>
+              <nav className="mobile-menu-nav">
+                {navItems.map((item) => (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className={activeSection === item.section ? "is-active" : ""}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </nav>
+              <a href="#contact" className="mobile-menu-cta" onClick={() => setMobileMenuOpen(false)}>
+                Get in Touch
+              </a>
+            </motion.aside>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <section id="home" className="hero-section">
         <div className="hero-geometry" aria-hidden="true">
@@ -1241,7 +1341,7 @@ export default function PortfolioClient() {
               <strong>Email:</strong> nitheshkanna23@gmail.com
             </p>
             <p>
-              <strong>Location:</strong> Karanampettai, Tamil Nadu
+              <strong>Location:</strong> Namakkal, Tamil Nadu
             </p>
             <p>
               <strong>GitHub:</strong>{" "}
@@ -1284,46 +1384,68 @@ export default function PortfolioClient() {
             </div>
           </motion.aside>
 
-          <motion.form
-            className="contact-form"
-            onSubmit={(event) => event.preventDefault()}
-            initial={shouldReduceMotion ? false : { opacity: 0, x: 24 }}
-            animate={shouldReduceMotion || contactInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 24 }}
-            transition={
-              shouldReduceMotion
-                ? { duration: 0 }
-                : { duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }
-            }
-          >
-            <label>
-              Name
-              <input type="text" name="name" placeholder="Your name" />
-            </label>
-            <label>
-              Email
-              <input type="email" name="email" placeholder="your@email.com" />
-            </label>
-            <label>
-              Subject
-              <input type="text" name="subject" placeholder="Project discussion" />
-            </label>
-            <label>
-              Message
-              <textarea name="message" rows={5} placeholder="Tell me about your idea..." />
-            </label>
-            <motion.button
-              type="submit"
-              whileHover={
+          {contactFormReady ? (
+            <motion.form
+              className="contact-form"
+              onSubmit={(event) => event.preventDefault()}
+              initial={shouldReduceMotion ? false : { opacity: 0, x: 24 }}
+              animate={shouldReduceMotion || contactInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 24 }}
+              transition={
                 shouldReduceMotion
-                  ? undefined
-                  : { scale: 1.02, boxShadow: "0 0 20px rgba(59,130,246,0.35)" }
+                  ? { duration: 0 }
+                  : { duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }
               }
-              whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
-              transition={{ duration: 0.2 }}
             >
-              Send Message
-            </motion.button>
-          </motion.form>
+              <label>
+                Name
+                <input type="text" name="name" placeholder="Your name" />
+              </label>
+              <label>
+                Email
+                <input type="email" name="email" placeholder="your@email.com" />
+              </label>
+              <label>
+                Subject
+                <input type="text" name="subject" placeholder="Project discussion" />
+              </label>
+              <label>
+                Message
+                <textarea name="message" rows={5} placeholder="Tell me about your idea..." />
+              </label>
+              <motion.button
+                type="submit"
+                whileHover={
+                  shouldReduceMotion
+                    ? undefined
+                    : { scale: 1.02, boxShadow: "0 0 20px rgba(59,130,246,0.35)" }
+                }
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+                transition={{ duration: 0.2 }}
+              >
+                Send Message
+              </motion.button>
+            </motion.form>
+          ) : (
+            <div className="contact-form contact-form-placeholder" aria-hidden="true">
+              <div className="contact-form-placeholder-field">
+                <span>Name</span>
+                <span className="contact-form-placeholder-input" />
+              </div>
+              <div className="contact-form-placeholder-field">
+                <span>Email</span>
+                <span className="contact-form-placeholder-input" />
+              </div>
+              <div className="contact-form-placeholder-field">
+                <span>Subject</span>
+                <span className="contact-form-placeholder-input" />
+              </div>
+              <div className="contact-form-placeholder-field">
+                <span>Message</span>
+                <span className="contact-form-placeholder-input contact-form-placeholder-textarea" />
+              </div>
+              <span className="contact-form-placeholder-btn">Send Message</span>
+            </div>
+          )}
         </motion.div>
       </section>
 
@@ -1350,7 +1472,6 @@ export default function PortfolioClient() {
           </div>
         </div>
         <div className="footer-right">
-          <p>© 2026 Nithesh Kanna</p>
           <div>
             <motion.a
               href="https://github.com/NITHESH2303"
@@ -1378,6 +1499,7 @@ export default function PortfolioClient() {
               Email
             </motion.a>
           </div>
+          <p>© 2026 Nithesh Kanna</p>
           <p className="status-dot">
             <span className="status-pulse-wrap">
               <motion.span
