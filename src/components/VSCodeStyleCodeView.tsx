@@ -1,8 +1,26 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect } from "react";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
+
+function useSuppressMonacoCanceledError() {
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") return;
+    const original = console.error;
+    console.error = (...args: unknown[]) => {
+      const msg = args[0];
+      if (typeof msg === "string" && (msg === "Canceled" || msg.startsWith("Canceled") || msg.includes("ERR Canceled"))) {
+        return;
+      }
+      original.apply(console, args);
+    };
+    return () => {
+      console.error = original;
+    };
+  }, []);
+}
 
 type VSCodeStyleCodeViewProps = {
   value: string;
@@ -39,6 +57,8 @@ export function getLanguageFromPathOrLang(githubRawUrl?: string | null): string 
 }
 
 export default function VSCodeStyleCodeView({ value, language = "plaintext", className }: VSCodeStyleCodeViewProps) {
+  useSuppressMonacoCanceledError();
+
   return (
     <div className={className} style={{ height: "100%", minHeight: 320 }}>
       <MonacoEditor
@@ -56,6 +76,9 @@ export default function VSCodeStyleCodeView({ value, language = "plaintext", cla
           lineNumbersMinChars: 3,
           fontSize: 13,
           fontFamily: "var(--font-mono, 'Menlo', 'Monaco', 'Consolas', monospace)",
+          wordWrap: "off",
+          mouseWheelZoom: false,
+          smoothScrolling: false,
           padding: { top: 12, bottom: 12 },
           renderLineHighlight: "line",
           scrollbar: {
