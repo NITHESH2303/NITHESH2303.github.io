@@ -16,7 +16,7 @@ function hitTest(
   if (px >= 0.08 && px <= 0.42 && py >= 0.2 && py <= 0.66) return "neuralNetwork";
   if (px >= 0.06 && px <= 0.22 && py >= 0.12 && py <= 0.28) return "transformerAttention";
   if (px >= 0.82 && px <= 0.94 && py >= 0.58 && py <= 0.72) return "activationFunctions";
-  if (px >= 0.85 && px <= 0.98 && py >= 0.75 && py <= 0.92) return "cnnFeatureMap";
+  if (px >= 0.54 && px <= 0.76 && py >= 0.50 && py <= 0.70) return "cnnFeatureMap";
   const lcx = 0.78;
   const lcy = 0.45;
   const lr = 80 / width;
