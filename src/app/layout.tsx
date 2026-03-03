@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   title: "Nithesh Kanna | Portfolio",
   description:
     "Portfolio of Nithesh Kanna, software developer focused on backend systems, enterprise integrations, and applied AI.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
